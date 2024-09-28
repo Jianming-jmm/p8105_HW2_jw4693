@@ -1,0 +1,158 @@
+---
+title: "p8105 HW2"
+author: "Jianming Wang"
+date: 2024-09-12
+output: 
+  github_document
+---
+
+```{r setup}
+library(tidyverse)
+library(readxl)
+
+```
+
+# Problem 1
+
+## import and read the data
+```{r data import and reading}
+subway <- read_csv('NYC_Transit_Subway_Entrance_And_Exit_Data.csv')|>
+  janitor::clean_names()
+head(subway)
+```
+
+Here, I first import the subway data as my raw data, and clean up the variable names. After importing, I have a look at the data.
+
+## Clean the data
+
+```{r cleaning}
+subway <- subway|>
+  select(line, station_name, station_latitude, station_longitude, route1, route2, route3, route4, route5, route6, route7, route8, route9, route10, route11, entry, vending, entrance_latitude, entrance_longitude, entrance_type, ada)|>
+  mutate(entry = if_else(entry == 'YES', TRUE, FALSE))|>
+  unique()
+head(subway)
+summary(subway)
+```
+
+After importing, based on the need of the problem, I select rows about information of line, station, name, station latitude / longitude, routes served, entry, vending, entrance type, entrance latitude / longitude and ADA compliance.
+Then, I convert the entry information to logical variable and delete the duplicated rows. There are 1868 rows and 21 columns in this data, and its dimension is 39228. 
+The data is tidy, in which each row represents a unique station entrance, each column represents a different variable and each cell contains only one value.
+
+## Answer questions
+
+```{r manipulating}
+distinct(subway,line,station_name)|>
+  nrow()
+select(subway,line,station_name,ada)|>
+  unique()|>
+  pull(ada)|>
+  sum()
+filter(subway, vending == 'NO')|>
+  pull(entry)|>
+  mean()
+```
+Totally, there are 465 distinct stations, among which 84 stations are ADA compliant. The proportion of station entrances / exits without vending that allow entrance is 0.377(37.7%).
+
+## Reformating the data
+
+```{r reformating}
+subway$route8 <- as.character(subway$route8)
+subway$route9 <- as.character(subway$route9)
+subway$route10 <- as.character(subway$route10)
+subway$route11 <- as.character(subway$route11)
+subway_tidy = 
+  pivot_longer(
+    subway, 
+    route1:route11,
+    names_to = "route_number", 
+    values_to = "route_name")
+subway_A <- select(subway_tidy, line, station_name, route_name)|>
+  filter(route_name == 'A')|>
+  unique()
+nrow(subway_A)
+subway_ADA <- select(subway, line, station_name, ada)|>
+  unique()
+left_join(subway_A,subway_ADA,by = c('line','station_name'))|>
+  pull(ada)|>
+  sum()
+```
+There are 60 distinct stations serving the A train, 17 of which are ADA compliant.
+
+
+# Problem 2
+
+## Importing and cleaning for "Mr. Trash Wheel" sheet
+```{r importing and cleaning}
+Trashwheel <- read_excel('202309 Trash Wheel Collection Data.xlsx', sheet = 1, range = 'A2:N586')|>
+  janitor::clean_names()
+Trashwheel$sports_balls <- as.integer(Trashwheel$sports_balls)
+head(Trashwheel)
+```
+
+## Importing and cleaning for "Professor Trash Wheel" and "Gwynnda" sheet and combine data
+
+```{r importing and cleaning 2}
+Trashwheel_2 <- read_excel('202309 Trash Wheel Collection Data.xlsx', sheet = 2, range = 'A2:M108')|>
+  janitor::clean_names()
+Trashwheel_3 <- read_excel('202309 Trash Wheel Collection Data.xlsx', sheet = 4, range = 'A2:L157')|>
+  janitor::clean_names()
+```
+
+
+```{r combining}
+Trashwheel <- mutate(Trashwheel,trashwheel_name = 'Mr. Trash Wheel')|>
+  select(-1)
+Trashwheel_2 <- mutate(Trashwheel_2,trashwheel_name = 'Professor Trash Wheel')|>
+  select(-1)
+Trashwheel_3 <- mutate(Trashwheel_3,trashwheel_name = 'Gwynnda Trash Wheel')|>
+  select(-1)
+Trashwheel$year <- as.numeric(Trashwheel$year)
+Trashwheel_total <- bind_rows(Trashwheel,Trashwheel_2,Trashwheel_3)|>
+  relocate(trashwheel_name)|>
+  mutate(dumpster = 1:845)|>
+  relocate(dumpster)
+```
+
+There are totally `r nrow(Trashwheel_total)` observations in the dataset, including information about date/month/year of using Trashwheels, the weight trashwheels colllect and weights or numbers of different types of rubbish such as plastic bottles, glass bottles, plastic bags, cigarette butts and so on. Also, it contains information about different types of Trashwheel and number of homes powered.
+The total weight of trash collected by Professor Trash Wheel is `r filter(Trashwheel_total,trashwheel_name =='Professor Trash Wheel')|>pull(weight_tons)|>sum()`t. In June of 2022, Gwynnda collected totally `r filter(Trashwheel_total,trashwheel_name =='Gwynnda Trash Wheel' & month == 'June' & year == 2022)|>pull(cigarette_butts)|>sum()` cigarette butts.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
