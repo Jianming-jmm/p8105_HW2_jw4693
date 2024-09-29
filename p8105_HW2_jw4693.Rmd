@@ -9,14 +9,14 @@ output:
 ```{r setup}
 library(tidyverse)
 library(readxl)
-
+library(ggplot2)
 ```
 
 # Problem 1
 
 ## import and read the data
 ```{r data import and reading}
-subway <- read_csv('NYC_Transit_Subway_Entrance_And_Exit_Data.csv')|>
+subway <- read_csv('./local_data/NYC_Transit_Subway_Entrance_And_Exit_Data.csv')|>
   janitor::clean_names()
 head(subway)
 ```
@@ -83,7 +83,7 @@ There are 60 distinct stations serving the A train, 17 of which are ADA complian
 
 ## Importing and cleaning for "Mr. Trash Wheel" sheet
 ```{r importing and cleaning}
-Trashwheel <- read_excel('202309 Trash Wheel Collection Data.xlsx', sheet = 1, range = 'A2:N586')|>
+Trashwheel <- read_excel('./local_data/202309 Trash Wheel Collection Data.xlsx', sheet = 1, range = 'A2:N586')|>
   janitor::clean_names()
 Trashwheel$sports_balls <- as.integer(Trashwheel$sports_balls)
 head(Trashwheel)
@@ -92,9 +92,9 @@ head(Trashwheel)
 ## Importing and cleaning for "Professor Trash Wheel" and "Gwynnda" sheet and combine data
 
 ```{r importing and cleaning 2}
-Trashwheel_2 <- read_excel('202309 Trash Wheel Collection Data.xlsx', sheet = 2, range = 'A2:M108')|>
+Trashwheel_2 <- read_excel('./local_data/202309 Trash Wheel Collection Data.xlsx', sheet = 2, range = 'A2:M108')|>
   janitor::clean_names()
-Trashwheel_3 <- read_excel('202309 Trash Wheel Collection Data.xlsx', sheet = 4, range = 'A2:L157')|>
+Trashwheel_3 <- read_excel('./local_data/202309 Trash Wheel Collection Data.xlsx', sheet = 4, range = 'A2:L157')|>
   janitor::clean_names()
 ```
 
@@ -117,25 +117,109 @@ There are totally `r nrow(Trashwheel_total)` observations in the dataset, includ
 The total weight of trash collected by Professor Trash Wheel is `r filter(Trashwheel_total,trashwheel_name =='Professor Trash Wheel')|>pull(weight_tons)|>sum()`t. In June of 2022, Gwynnda collected totally `r filter(Trashwheel_total,trashwheel_name =='Gwynnda Trash Wheel' & month == 'June' & year == 2022)|>pull(cigarette_butts)|>sum()` cigarette butts.
 
 
+# Problem 3
+
+## Creating a single, well-organized dataset 
+
+```{r load data}
+bakers <- read_csv('./local_data/bakers.csv')|>
+  janitor::clean_names()
+bake <- read_csv('./local_data/bakes.csv')|>
+  janitor::clean_names()
+results <- read_csv('./local_data/results.csv', skip = 3, col_names = c('series','episode','baker','technical','result'))|>
+  janitor::clean_names()
+```
+```{r}
+colnames(bakers)[1] <- 'baker'
+bakers <- separate(bakers,baker, into= c("baker","baker_last_name"), sep = ' ')
+```
 
 
+```{r cleaning and merging}
+bake_result <- left_join(bake, results, by = c('series','episode','baker'))
+anti_join(bake,bake_result)
+head(bake_result)
+```
+
+First I combine bake with results data, and get a dataset for all bakes and their results. Using anti_join to check the data, I find that there is 0 row in the result data being lost, so the data is correct.
+
+```{r}
+bake_result2 <- results|>
+  filter(series %in% c(9,10))
+bake_result2 <- right_join(bake, bake_result2)|>
+  filter(is.na(result)==0)
+bake_result <- bind_rows(bake_result,bake_result2)
+```
+Bake data does not contain information for series9 and series 10, so for the completeness, I combine results from series 9 and 10 with bake-result data. Now, the bake-result combining data is correct and complete.
 
 
+```{r}
+final_data <- left_join(bakers,bake_result, by = c('baker','series'))
+anti_join(bake_result, final_data)
+anti_join(final_data, bake_result)
+```
+
+Secondly, I try to combine bake results with bakers. Compared with bake results, the baker Jo in series 2 is lost because of the wrong format. 
+
+```{r}
+bake_result$baker[which(bake_result$baker == '"Jo"')] = 'Jo'
+final_data <- left_join(bakers,bake_result, by = c('baker','series'))
+anti_join(bake_result, final_data)
+anti_join(final_data, bake_result)
+```
+
+After deleting the quote in bake_result data, I get the final data with completeness and correctness.
+```{r}
+write_csv(final_data, './local_data/final_dataset_for_problem3.csv')
+```
+
+The final dataset contains all information from the given data and removes unnecessary data(e.g. a baker's contest information after eliminating).
 
 
+## Answering questions
 
+```{r}
+win_data <- final_data|>
+  filter(series %in% c(5,6,7,8,9,10))|>
+  filter(result %in% c('STAR BAKER','WINNER'))|>
+  select(-technical, -signature_bake, -show_stopper)
+win_data
+```
 
+Winners here are from different hometowns and in different working fields, from different ages. There are some bakers gaining multiple times of winners/star bakers.
 
+```{r}
+ggplot(win_data, aes(x = baker_age))+
+  geom_histogram(bins = 20)
+```
 
+Through histgram, we can find that bakers with a younger age are easier to win the 'WINNER'/'STAR BAKER'.
 
+```{r loading viewers data}
+viewers <- read_csv('./local_data/viewers.csv')|>
+  janitor::clean_names()
+viewers <- pivot_longer(
+    viewers, 
+    series_1:series_10,
+    names_to = "series", 
+    values_to = "viewership")
+head(viewers, 10)
+```
 
+```{r calculating}
+viewers|>
+  filter(series == 'series_1')|>
+  pull(viewership)|>
+  na.omit()|>
+  mean()
+viewers|>
+  filter(series == 'series_5')|>
+  pull(viewership)|>
+  na.omit()|>
+  mean()
+```
 
-
-
-
-
-
-
+The average viewership in season 1 is 2.77, and 10.0393 in season 5.
 
 
 
