@@ -36,7 +36,7 @@ summary(subway)
 
 After importing, based on the need of the problem, I select rows about information of line, station, name, station latitude / longitude, routes served, entry, vending, entrance type, entrance latitude / longitude and ADA compliance.
 Then, I convert the entry information to logical variable and delete the duplicated rows. There are 1868 rows and 21 columns in this data, and its dimension is 39228. 
-The data is tidy, in which each row represents a unique station entrance, each column represents a different variable and each cell contains only one value.
+The data is untidy, even though in which each row represents a unique station entrance, the columns from route1 to route 11 is not unique variables which all contain the route information.
 
 ## Answer questions
 
@@ -135,22 +135,33 @@ colnames(bakers)[1] <- 'baker'
 bakers <- separate(bakers,baker, into= c("baker","baker_last_name"), sep = ' ')
 ```
 
+Bakers in bakers data are called by full names, so firstly I divide it into first and last name.
 
 ```{r cleaning and merging}
 bake_result <- left_join(bake, results, by = c('series','episode','baker'))
 anti_join(bake,bake_result)
+anti_join(bake,bakers)
+anti_join(results,bakers)
+anti_join(bakers,bake)
 head(bake_result)
 ```
 
-First I combine bake with results data, and get a dataset for all bakes and their results. Using anti_join to check the data, I find that there is 0 row in the result data being lost, so the data is correct.
+```{r}
+results$baker[which(results$baker == 'Joanne')] = '"Jo"'
+bake_result <- left_join(bake, results, by = c('series','episode','baker'))
+```
+
+First I combine bake with results data, and get a dataset for all bakes and their results. Using anti_join to check the data, I find that there is 0 row in the result data being lost, so the data is correct. Bake and bakers data both call Joanne as Jo, and the former writes Jo with quote. So when I combine bake and results data, I need to unify the name.
+
 
 ```{r}
 bake_result2 <- results|>
   filter(series %in% c(9,10))
-bake_result2 <- right_join(bake, bake_result2)|>
+bake_result2 <- right_join(bake, bake_result2,by = c('series','episode','baker'))|>
   filter(is.na(result)==0)
 bake_result <- bind_rows(bake_result,bake_result2)
 ```
+
 Bake data does not contain information for series9 and series 10, so for the completeness, I combine results from series 9 and 10 with bake-result data. Now, the bake-result combining data is correct and complete.
 
 
@@ -187,7 +198,7 @@ win_data <- final_data|>
 win_data
 ```
 
-Winners here are from different hometowns and in different working fields, from different ages. There are some bakers gaining multiple times of winners/star bakers.
+Winners here are from different hometowns and in different working fields, from different ages. There are some bakers gaining multiple times of winners/star bakers, and people who win the winner probably had one or more star baker prizes. 
 
 ```{r}
 ggplot(win_data, aes(x = baker_age))+
