@@ -65,7 +65,8 @@ subway_tidy =
     subway, 
     route1:route11,
     names_to = "route_number", 
-    values_to = "route_name")
+    values_to = "route_name")|>
+  filter(is.na(route_name)==0)
 subway_A <- select(subway_tidy, line, station_name, route_name)|>
   filter(route_name == 'A')|>
   unique()
