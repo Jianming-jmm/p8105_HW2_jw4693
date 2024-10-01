@@ -15,6 +15,7 @@ library(ggplot2)
 # Problem 1
 
 ## import and read the data
+
 ```{r data import and reading}
 subway <- read_csv('./local_data/NYC_Transit_Subway_Entrance_And_Exit_Data.csv')|>
   janitor::clean_names()
@@ -34,9 +35,7 @@ head(subway)
 summary(subway)
 ```
 
-After importing, based on the need of the problem, I select rows about information of line, station, name, station latitude / longitude, routes served, entry, vending, entrance type, entrance latitude / longitude and ADA compliance.
-Then, I convert the entry information to logical variable and delete the duplicated rows. There are 1868 rows and 21 columns in this data, and its dimension is 39228. 
-The data is untidy, even though in which each row represents a unique station entrance, the columns from route1 to route 11 is not unique variables which all contain the route information.
+After importing, based on the need of the problem, I select rows about information of line, station, name, station latitude / longitude, routes served, entry, vending, entrance type, entrance latitude / longitude and ADA compliance. Then, I convert the entry information to logical variable and delete the duplicated rows. There are 1868 rows and 21 columns in this data, and its dimension is 39228. The data is untidy, even though in which each row represents a unique station entrance, the columns from route1 to route 11 is not unique variables which all contain the route information.
 
 ## Answer questions
 
@@ -51,6 +50,7 @@ filter(subway, vending == 'NO')|>
   pull(entry)|>
   mean()
 ```
+
 Totally, there are 465 distinct stations, among which 84 stations are ADA compliant. The proportion of station entrances / exits without vending that allow entrance is 0.377(37.7%).
 
 ## Reformating the data
@@ -77,14 +77,15 @@ left_join(subway_A,subway_ADA,by = c('line','station_name'))|>
   pull(ada)|>
   sum()
 ```
-There are 60 distinct stations serving the A train, 17 of which are ADA compliant.
 
+There are 60 distinct stations serving the A train, 17 of which are ADA compliant.
 
 # Problem 2
 
 ## Importing and cleaning for "Mr. Trash Wheel" sheet
+
 ```{r importing and cleaning}
-Trashwheel <- read_excel('./local_data/202309 Trash Wheel Collection Data.xlsx', sheet = 1, range = 'A2:N586')|>
+Trashwheel <- read_excel('./local_data/202409 Trash Wheel Collection Data.xlsx', sheet = 1, range = 'A2:N653')|>
   janitor::clean_names()
 Trashwheel$sports_balls <- as.integer(Trashwheel$sports_balls)
 head(Trashwheel)
@@ -93,12 +94,11 @@ head(Trashwheel)
 ## Importing and cleaning for "Professor Trash Wheel" and "Gwynnda" sheet and combine data
 
 ```{r importing and cleaning 2}
-Trashwheel_2 <- read_excel('./local_data/202309 Trash Wheel Collection Data.xlsx', sheet = 2, range = 'A2:M108')|>
+Trashwheel_2 <- read_excel('./local_data/202409 Trash Wheel Collection Data.xlsx', sheet = 2, range = 'A2:M120')|>
   janitor::clean_names()
-Trashwheel_3 <- read_excel('./local_data/202309 Trash Wheel Collection Data.xlsx', sheet = 4, range = 'A2:L157')|>
+Trashwheel_3 <- read_excel('./local_data/202409 Trash Wheel Collection Data.xlsx', sheet = 4, range = 'A2:L265')|>
   janitor::clean_names()
 ```
-
 
 ```{r combining}
 Trashwheel <- mutate(Trashwheel,trashwheel_name = 'Mr. Trash Wheel')|>
@@ -110,17 +110,15 @@ Trashwheel_3 <- mutate(Trashwheel_3,trashwheel_name = 'Gwynnda Trash Wheel')|>
 Trashwheel$year <- as.numeric(Trashwheel$year)
 Trashwheel_total <- bind_rows(Trashwheel,Trashwheel_2,Trashwheel_3)|>
   relocate(trashwheel_name)|>
-  mutate(dumpster = 1:845)|>
+  mutate(dumpster = 1:1032)|>
   relocate(dumpster)
 ```
 
-There are totally `r nrow(Trashwheel_total)` observations in the dataset, including information about date/month/year of using Trashwheels, the weight trashwheels colllect and weights or numbers of different types of rubbish such as plastic bottles, glass bottles, plastic bags, cigarette butts and so on. Also, it contains information about different types of Trashwheel and number of homes powered.
-The total weight of trash collected by Professor Trash Wheel is `r filter(Trashwheel_total,trashwheel_name =='Professor Trash Wheel')|>pull(weight_tons)|>sum()`t. In June of 2022, Gwynnda collected totally `r filter(Trashwheel_total,trashwheel_name =='Gwynnda Trash Wheel' & month == 'June' & year == 2022)|>pull(cigarette_butts)|>sum()` cigarette butts.
-
+There are totally `r nrow(Trashwheel_total)` observations in the dataset, including information about date/month/year of using Trashwheels, the weight trashwheels collect and weights or numbers of different types of rubbish such as plastic bottles, glass bottles, plastic bags, cigarette butts and so on. Also, it contains information about different types of Trashwheel and number of homes powered. The total weight of trash collected by Professor Trash Wheel is `r filter(Trashwheel_total,trashwheel_name =='Professor Trash Wheel')|>pull(weight_tons)|>sum()`t. In June of 2022, Gwynnda collected totally `r filter(Trashwheel_total,trashwheel_name =='Gwynnda Trash Wheel' & month == 'June' & year == 2022)|>pull(cigarette_butts)|>sum()` cigarette butts.
 
 # Problem 3
 
-## Creating a single, well-organized dataset 
+## Creating a single, well-organized dataset
 
 ```{r load data}
 bakers <- read_csv('./local_data/bakers.csv')|>
@@ -130,6 +128,7 @@ bake <- read_csv('./local_data/bakes.csv')|>
 results <- read_csv('./local_data/results.csv', skip = 3, col_names = c('series','episode','baker','technical','result'))|>
   janitor::clean_names()
 ```
+
 ```{r}
 colnames(bakers)[1] <- 'baker'
 bakers <- separate(bakers,baker, into= c("baker","baker_last_name"), sep = ' ')
@@ -153,7 +152,6 @@ bake_result <- left_join(bake, results, by = c('series','episode','baker'))
 
 First I combine bake with results data, and get a dataset for all bakes and their results. Using anti_join to check the data, I find that there is 0 row in the result data being lost, so the data is correct. Bake and bakers data both call Joanne as Jo, and the former writes Jo with quote. So when I combine bake and results data, I need to unify the name.
 
-
 ```{r}
 bake_result2 <- results|>
   filter(series %in% c(9,10))
@@ -164,14 +162,13 @@ bake_result <- bind_rows(bake_result,bake_result2)
 
 Bake data does not contain information for series9 and series 10, so for the completeness, I combine results from series 9 and 10 with bake-result data. Now, the bake-result combining data is correct and complete.
 
-
 ```{r}
 final_data <- left_join(bakers,bake_result, by = c('baker','series'))
 anti_join(bake_result, final_data)
 anti_join(final_data, bake_result)
 ```
 
-Secondly, I try to combine bake results with bakers. Compared with bake results, the baker Jo in series 2 is lost because of the wrong format. 
+Secondly, I try to combine bake results with bakers. Compared with bake results, the baker Jo in series 2 is lost because of the wrong format.
 
 ```{r}
 bake_result$baker[which(bake_result$baker == '"Jo"')] = 'Jo'
@@ -181,12 +178,12 @@ anti_join(final_data, bake_result)
 ```
 
 After deleting the quote in bake_result data, I get the final data with completeness and correctness.
+
 ```{r}
 write_csv(final_data, './local_data/final_dataset_for_problem3.csv')
 ```
 
 The final dataset contains all information from the given data and removes unnecessary data(e.g. a baker's contest information after eliminating).
-
 
 ## Answering questions
 
@@ -198,7 +195,7 @@ win_data <- final_data|>
 win_data
 ```
 
-Winners here are from different hometowns and in different working fields, from different ages. There are some bakers gaining multiple times of winners/star bakers, and people who win the winner probably had one or more star baker prizes. 
+Winners here are from different hometowns and in different working fields, from different ages. There are some bakers gaining multiple times of winners/star bakers, and people who win the winner probably had one or more star baker prizes.
 
 ```{r}
 ggplot(win_data, aes(x = baker_age))+
@@ -232,23 +229,3 @@ viewers|>
 ```
 
 The average viewership in season 1 is 2.77, and 10.0393 in season 5.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
